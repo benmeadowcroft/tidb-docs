@@ -14,7 +14,7 @@ This document describes the disaster recovery (DR) solution based on multiple re
 
 ## Introduction
 
-Important production systems usually require regional DR with zero RPO and minute-level RTO. A Raft-based distributed database, TiDB provides multiple replicas, which allows it to support regional DR with data consistency and high availability guaranteed. Considering the small network latency between available zones (AZs) in the same region, we can dispatch business traffic to two AZs on the same region simultaneously, and achieve load balance among AZs on the same region by properly locating the Region leader and the PD leader.
+Important production systems usually require resilience to disaster events that impact a Data Center (DC) or an Availability Zone (AZ) DR and deliver zero RPO and minute-level RTO. TiDB's [Raft-based](./best-practices/tidb-best-practices.md#raft) architecture enables TiDB to deliver high availability against failure of individual hosts, or even the failure of an entire Availaiblity Zone. Considering the small network latency between available zones (AZs) in the same region, we can dispatch business traffic across AZs on the same region simultaneously, and achieve load balance among AZs on the same region by properly locating the Region leader and the PD leader.
 
 > **Note:**
 >
@@ -22,9 +22,9 @@ Important production systems usually require regional DR with zero RPO and minut
 
 ## Set up a cluster and configure replicas
 
-This section illustrates how to create a TiDB cluster across three regions with five replicas using TiUP, and how to achieve DR by properly distributing data and PD nodes.
+This section illustrates how to create a TiDB cluster across three Availability Zones with five replicas using TiUP, and how to achieve DR by properly distributing data and PD nodes.
 
-In this example, TiDB contains five replicas and three regions. Region 1 is the primary region, region 2 is the secondary region, and region 3 is used for voting. Similarly, the PD cluster also contains 5 replicas, which function basically the same as the TiDB cluster.
+In this example, TiDB contains three replicas and three availability zones. AZ 1 is the primary region, AZ 2 is the secondary region, and AZ 3 is used for voting. Similarly, the PD cluster also contains 3 replicas, which function basically the same as the TiDB cluster.
 
 1. Create a topology file similar to the following:
 

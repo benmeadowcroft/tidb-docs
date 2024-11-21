@@ -5,109 +5,108 @@ summary: Learn about the disaster recovery solutions provided by TiDB, including
 
 # Overview of TiDB Disaster Recovery Solutions
 
-This document introduces the disaster recovery (DR) solutions provided by TiDB. The organization of this document is as follows:
+TiDB provides multiple options for delivering Disaster Recovery (DR) for your cluster. Disaster Recovery focuses on responding to larger scale threats to the availability and integrity of your data. Such threats may include natural disasters, technical issues, human error, and even malicious actions.
 
-- Describes the basic concepts in DR.
-- Introduces the architecture of TiDB, TiCDC, and Backup & Restore (BR).
-- Describes the DR solutions provided by TiDB.
-- Compares these DR solutions.
+This document introduces common approaches to delivering a Disaster Recovery solution with TiDB and understanding the trade-offs between the solutions.
 
-## Basic concepts
+## Key concepts
 
-- RTO (Recovery Time Objective): The time required for the system to recover from a disaster.
-- RPO (Recovery Point Objective): The maximum amount of data loss that the business can tolerate in a disaster.
+It is important to identify the Recovery Time Objective (RTO) and Recovery Point Objective (RPO) that are acceptable for your system. These objectives will help guide selection of appropriate Disaster Recovery solutions and ensure they align with your overall Service Level Objectives (SLO).
 
-The following figure illustrates these two concepts:
+- RPO (Recovery Point Objective): In the event of a disaster occurring, the RPO represents the maximum amount of data loss that the organization can tolerate for this service.
+
+- RTO (Recovery Time Objective): After a disaster has occurred, the RTO represents the maximum amount of time that the organization can tolerate until this service to be fully operational.
 
 ![RTO and RPO](/media/dr/rto-rpo.png)
 
-- Error tolerance objective: Because a disaster can affect different regions. In this document, the term error tolerance objective is used to describe the maximum range of a disaster that the system can tolerate.
-- Region: This document focuses on regional DR and "region" mentioned here refers to a geographical area or city.
+- SLO (Service Level Objectives): In addition to RPO and RTO, the SLO's outline other objectives for the service. These may include objectives around Performance, Availability, and Reliability. As you consider the different approaches to meeting your recovery related objectives, you will also want to ensure that you are satisfying the other objectives for the service.
 
-## Component architecture
+## Disaster Recovery capabilities provided by TiDB
 
-Before introducing specific DR solutions, this section introduces the architecture of TiDB components from the perspective of DR, including TiDB, TiCDC, and BR.
+TiDB includes multiple recovery capabilities to address different recovery needs. These include:
 
-### TiDB
+- TIDB distributed cluster design delivers High Availability within a geographic region.
+- Cross-cluster replication with TiCDC delivers DR across different geographic regions.
+- Flashback delivers rapid recovery from destructive DML/DDL statements.
+- Backup and restore (with Point-in-Time-Recovery) delivers fine-grained recovery from cluster failures, or destructive statements.
 
-![TiDB architecture](/media/dr/tidb-architecture.png)
+### TiDB High Availability
 
-TiDB is designed with an architecture of separated computing and storage:
+TiDB's distributed architecture and use of the [Raft protocol](./best-practices/tidb-best-practices.md#raft) enables TiDB to deliver high availability against failure of individual hosts. To be resilient against the failure of an entire Availaiblity Zone (AZ), a TiDB cluster can also be distributed across multiple AZs within a single geographic region.
 
-- TiDB is the SQL computing layer of the system.
-- TiKV is the storage layer of the system, and is a row-based storage engine. [Region](/glossary.md#regionpeerraft-group) is the basic unit for scheduling data in TiKV. A Region is a collection of sorted rows of data. The data in a Region is saved in at least three replicas, and data changes are replicated in the log layer through the Raft protocol.
-- An optional component, TiFlash is a columnar storage engine that can be used to speed up analytical queries. Data is replicated from TiKV to TiFlash through the learner role in a Raft group.
+- Tutorial: [Multiple Availability Zones in One Region Deployment](./multi-data-centers-in-one-city-deployment.md)
+- Solution Detail: [DR Solution Based on Multiple Replicas in a Single Cluster](./dr-multi-replica.md)
 
-TiDB stores three complete data replicas. Therefore, it is naturally capable of DR based on multiple replicas. At the same time, because TiDB uses Raft logs to replicate transaction logs, it can also provide DR based on transaction log replication.
+### Backup and Restore
 
-### TiCDC
+TiDB's BR (Backup and Recovery) provides periodic backups of the data within a TiDB cluster. Additionally log backups and PiTR (Point-in-Time-Recovery) allow TiDB to provide fine-grained recovery to any point in time within the retained backups. TiDB backups also support immutable object storage as a backup target for protection against accidental or malicious deletional.
 
-![TiCDC architecture](/media/ticdc/cdc-architecture.png)
+The Backup and Restore capability is critical for delivering recovery options for threats that impact the data itself (e.g. inadvertent `DELETE/TRUNCATE/DROP/UPDATE` operations), and not the availability of the cluster.
 
-As an incremental data replication tool for TiDB, TiCDC is highly available through PD's etcd. TiCDC pulls data changes from TiKV nodes through multiple Capture processes, and then sorts and merges data changes internally. After that, TiCDC replicates data to multiple downstream systems by using multiple replication tasks. In the preceding architecture diagram:
+- Feature Overview: [Backup and Restore Overview](./br/backup-and-restore-overview.md)
+- Usage Overview: [Backup and Restore Overview](./br/br-use-overview.md)
+- Feature Guide: [Snapshot Backup and Restore Guide](./br/br-snapshot-guide.md)
+- Feature Guide: [Log Backup and PITR Guide](./br/br-pitr-guide.md)
+- Solution Guide: [DR Solution Based on BR](./dr-backup-restore.md)
 
-- TiKV server: sends data changes in the upstream to TiCDC nodes. When TiCDC nodes find the change logs not continuous, they will actively request the TiKV server to provide change logs.
-- TiCDC: runs multiple Capture processes. Each Capture process pulls part of the KV change logs, and sorts the pulled data before replicating the changes to different downstream systems.
+### Cross-Cluster Replication with TiCDC
 
-It can be seen from the preceding architecture diagram that, the architecture of TiCDC is similar to that of a transactional log replication system, but with better scalability and merits of logical data replication. Therefore, TiCDC is a good supplementation for TiDB in the DR scenario.
+TiDB's Change Data Capture (TiCDC) can replicate incremental data from one TiDB cluster to another. TiCDC can be configured to leverage object storage for [redo logs](./ticdc/ticdc-sink-to-mysql.md#disaster-recovery) to support eventual consistency in the face of a disaster.
 
-### BR
+A TiCDC solution for DR requires at least two clusters. If TiCDC is setup to replicate in one direction, the secondary cluster can be used to run read-only queries for less latency-sensitive applications using TiCDC's [Syncpoint feature](./dr-secondary-cluster.md#query-business-data-on-the-secondary-cluster). Multiple clusters can also be configured with [bidirectional replication](./ticdc/ticdc-bidirectional-replication.md) to support a multi-active cluster solution.
 
-![BR architecture](/media/br/br-snapshot-arch.png)
+- Feature Overview: [TiCDC Overview](./ticdc/ticdc-overview.md)
+- Solution Guide: [DR Solution Based on Primary and Secondary Clusters](./dr-secondary-cluster.md)
+- Solution Guide: [Perform Bi-Directional Replication Between Clusters](./dr-secondary-cluster.md#perform-bidirectional-replication-between-the-primary-and-secondary-clusters)
 
-As a backup and restore tool for TiDB, BR can perform full snapshot backup based on a specific time point and continuous log backup of a TiDB cluster. When the TiDB cluster is completely unavailable, you can restore the backup files in a new cluster. BR is usually considered the last resort for data security.
+### Flashback
 
-## Solutions introduction
+TiDB's `FLASHBACK` capability provides the ability to recover from certain destructive DDL or DML statements by restoring a snapshot of the cluster, using data that is more recent than the current [Garbage Collection](./garbage-collection-overview.md) (GC) [safe point](./status-variables.md#tidb_gc_safe_point). `FLASHBACK CLUSTER` restores the cluster to a specific snapshot. `FLASHBACK DATABASE` restores a database and its data deleted by the DROP statement. `FLASHBACK TABLE` restores a tables and its data dropped by the DROP or TRUNCATE operation.
 
-### DR solution based on primary and secondary clusters
+- Reference: [`FLASHBACK CLUSTER`](./sql-statements/sql-statement-flashback-cluster.md)
+- Reference: [`FLASHBACK DATABASE`](./sql-statements/sql-statement-flashback-database.md)
+- Reference: [`FLASHBACK TABLE`](./sql-statements/sql-statement-flashback-table.md)
 
-![Primary-secondary cluster DR](/media/dr/ticdc-dr.png)
+## Comparison of available DR options
 
-The preceding architecture contains two TiDB clusters, cluster 1 runs in region 1 and handles read and write requests. Cluster 2 runs in region 2 and works as the secondary cluster. When cluster 1 encounters a disaster, cluster 2 takes over services. Data changes are replicated between the two clusters using TiCDC. This architecture is also called the "1:1" DR solution.
+> **Note:**
+>
+> - While these tables distinguish between the individual capabilities, they may be combined together to provide greater protection. For example, the BR tool may be configured to provide recovery from destructive DML/DDL, while TiCDC is used to provide faster recovery from a regional disaster.
 
-This architecture is simple and highly available with region-level error tolerance objective, scalable write capability, second-level RPO, and minute-level RTO or even lower. If a production system does not require the RPO to be zero, this DR solution is recommended. For more information about this solution, see [DR solution based on primary and secondary clusters](/dr-secondary-cluster.md).
+### Applicable recovery scope
 
-### DR solution based on multiple replicas in a single cluster
+What kinds of disaster impact/scope does each capability guard against?
 
-![Multi-replica cluster DR](/media/dr/multi-replica-dr.png)
+| Capability | Resilient to Host Failure | …Availability Zone Failure | …Region Failure | …Destructive DML/DDL |
+| ------------------ | :-------------: | :-------------: | :-------------: | :-------------: |
+| Single AZ deployment  | Yes | No | No | No |
+| Multi-AZ deployment | Yes | Yes | No | No |
+| 2+ Clusters with TiCDC | Not Applicable | Yes, if clusters are in different AZs | Yes, if clusters are in different geographic regions | No |
+| Flashback | Not Applicable | No, requires cluster availability | No, requires cluster availability | Yes |
+| Backup and Restore | Not Applicable | Yes, when backup data is stored outside of AZ | Yes, when backup data is stored outside of region | Yes |
 
-In the preceding architecture, each region has two complete data replicas located in different available zones (AZs). The entire cluster is across three regions. Region 1 is the primary region that handles read and write requests. When region 1 is completely unavailable due to a disaster, region 2 can be used as a DR region. Region 3 is a replica used to meet the majority protocol. This architecture is also called the "2-2-1" solution.
+### Achievable recovery characteristics
 
-This solution provides region-level error tolerance, scalable write capability, zero RPO, and minute-level RTO or even lower. If a production system requires zero RPO, it is recommended to use this DR solution. For more information about this solution, see [DR solution based on multiple replicas in a single cluster](/dr-multi-replica.md).
+What performance and recovery options does each capability provide?
 
-### DR solution based on TiCDC and multiple replicas
+| Capability | Recovery Granularity |  RPO  |  RTO  | Recovery Point Selection |
+| ---------- | :------------: | :---: | :---: | :----------------------: |
+| Single AZ deployment | Cluster | Zero Data Loss | Zero Downtime | N/A |
+| Multi-AZ deployment | Cluster | Zero Data Loss | Zero Downtime | N/A |
+| 2+ Clusters with TiCDC  | Changefeed <br/>(set of Databases/Tables) | Less than 10 seconds | Less than 5 minutes | Latest, or within GC window (with Flashback and syncpoint) |
+| Flashback (Cluster)  | Cluster | Up to [GC life time](./system-variables.md#tidb_gc_life_time-new-in-v50) | Seconds | Up to [GC safe point](./status-variables.md#tidb_gc_safe_point) |
+| Flashback (Database/Table)  | Database/Table | Up to [GC life time](./system-variables.md#tidb_gc_life_time-new-in-v50) | Seconds | `DROP/TRUNCATION` point only |
+| Backup and Restore  | Cluster/Databases/Tables | Less than 5 minutes | Hours (scales with data size) | Any retained point in time |
 
-The preceding two solutions provide regional DR. However, they fail to work if multiple regions are unavailable at the same time. If your system is very important and requires error tolerance objective to cover multiple regions, you need to combine these two solutions.
+### Cost considerations
 
-![TiCDC-based multi-replica cluster DR](/media/dr/ticdc-multi-replica-dr.png)
+What are the key cost of ownership considerations for each capability?
 
-In the preceding architecture, there are two TiDB clusters. Cluster 1 has five replicas that span three regions. Region 1 contains two replicas that work as the primary region and handle write requests. Region 2 has two replicas that work as the DR region for region 1. This region provides read services that are not sensitive to latency. Located in Region 3, the last replica is used for voting.
-
-As the DR cluster for region 1 and region 2, cluster 2 runs in region 3 and contains three replicas. TiCDC replicates data from cluster 1. This architecture looks complicated but it can increase the error tolerance objective to multiple regions. If the RPO is not required to be zero when multiple regions are unavailable at the same time, this architecture is a good choice. This architecture is also called the "2-2-1:1" solution.
-
-Of course, if the error tolerance objective is multiple regions and RPO must be zero, you can also consider creating a cluster with at least nine replicas spanning five regions. This architecture is also called the "2-2-2-2-1" solution.
-
-### DR solution based on BR
-
-![BR-based cluster DR](/media/dr/br-dr.png)
-
-In this architecture, TiDB cluster 1 is deployed in region 1. BR regularly backs up the data of cluster 1 to region 2, and continuously backs up the data change logs of this cluster to region 2 as well. When region 1 encounters a disaster and cluster 1 cannot be recovered, you can use the backup data and data change logs to restore a new cluster (cluster 2) in region 2 to provide services.
-
-The DR solution based on BR provides an RPO lower than 5 minutes and an RTO that varies with the size of the data to be restored. For BR v6.5.0, you can refer to [Performance and impact of snapshot restore](/br/br-snapshot-guide.md#performance-and-impact-of-snapshot-restore) and [Performance and impact of PITR](/br/br-pitr-guide.md#performance-capabilities-of-pitr) to learn about the restore speed. Usually, the feature of backup across regions is considered the last resort of data security and also a must-have solution for most systems. For more information about this solution, see [DR solution based on BR](/dr-backup-restore.md).
-
-Meanwhile, starting from v6.5.0, BR supports [restoring a TiDB cluster from EBS volume snapshots](https://docs.pingcap.com/tidb-in-kubernetes/stable/restore-from-aws-s3-by-snapshot). If your cluster is running on Kubernetes and you want to restore the cluster as fast as possible without affecting the cluster, you can use this feature to reduce the RTO of your system.
-
-### Other DR solutions
-
-Besides the preceding DR solutions, if zero RPO is a must in the same-city dual-center scenario, you can also use the DR-AUTO sync solution. For more information, see [Two Data Centers in One City Deployment](/two-data-centers-in-one-city-deployment.md).
-
-## Solution comparison
-
-This section compares the DR solutions mentioned in this document, based on which you can select an appropriate DR solution to satisfy your business needs.
-
-| DR solution | TCO | Error tolerance objective | RPO | RTO | Network latency requirement | Target system |
-| --- | --- | --- | --- | --- | --- | --- |
-| DR solution based on multiple replicas in a single cluster (2-2-1) | High | Single region | 0 | Minute level | Less than 30 ms between regions | Production systems that have specific requirements on DR and response (RPO = 0) |
-| DR solution based on primary and secondary clusters (1:1)  | Medium | Single region | Less than 10 seconds | Less than 5 minutes | Less than 100 ms between regions | Production systems that have specific requirements on DR and response (RPO > 0) |
-| DR solution based on TiCDC and multiple replicas (2-2-1:1) | High | Multiple regions | Less than 10 seconds | Less than 5 minutes | Less than 30 ms for regions that use multiple replicas for DR. Less than 100 ms for the third region and other regions | Production systems that have strict requirements on DR and response |
-| DR solution based on BR | Low | Single region | Less than 5 minutes |  Hour level | No special requirement | Production systems that accept an RPO of less than 5 minutes and an RTO of up to an hour |
+| Capability | TCO Considerations |
+| ---------- | :----------------- |
+| Single AZ deployment | <ul><li>Operational complexity recovering from disasters impacting the zone</li></ul> | 
+| Multi-AZ deployment | <ul><li>Network traffic costs for cross-AZ traffic</li></ul> | 
+| 2+ Clusters with TiCDC (uni-directional)  | <ul><li>Secondary cluster costs</li><li>Network traffic costs for cross-region replication</li></ul> |
+| 2+ Clusters with TiCDC (bidirectional) | <ul><li>Application complexity for regional affinity</li><li>Secondary cluster costs</li><li>Network traffic costs for cross-region replication</li></ul> |
+| Flashback  | <ul><li>TiKV Storage overhead (particularly if extending [GC life time](./system-variables.md#tidb_gc_life_time-new-in-v50))</li></ul> | 
+| Backup and Restore  | <ul><li>Backup storage costs</li><li>Network traffic costs for cross-region replication</li></ul> | 

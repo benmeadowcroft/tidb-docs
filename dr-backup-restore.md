@@ -5,11 +5,11 @@ summary: Learn how to implement disaster recovery based on TiDB's backup and res
 
 # DR Solution Based on BR
 
-A TiDB cluster has multiple replicas, which allows it to tolerate the failure of a single data center or region and continue to provide services. In the case of a natural disaster, software vulnerability, hardware failure, virus attack, or misoperations, which impacts an area larger than a single data center or region, TiDB's Backup & Restore (BR) feature can back up data to an independent disaster recovery (DR) storage device to protect user data from damage. Compared with other DR solutions, the BR feature is more flexible, reliable, recoverable, and cost-effective:
+A TiDB cluster stores data resiliently, which allows it to tolerate the failure of a single data center or region and continue to provide services. In the case of a natural disaster, software vulnerability, hardware failure, virus attack, or misoperations, which impacts an area larger than a single data center or region, TiDB's Backup & Restore (BR) feature can back up data to an independent disaster recovery (DR) storage device to protect user data from damage. The BR feature provides a flexible, reliable, secure, and cost-effective Disaster Recovery option:
 
 - Flexibility: You can back up data any time with any frequency. This makes backup and restore flexible and better adapts to different business scenarios.
-- Reliability: Backup data is usually stored on an independent storage device and this means enhanced data security.
-- Recoverability: Any loss or damage to the original data caused by any unexpected situation can be recovered by restoring the backup data. This makes the BR feature highly recoverable and ensures the normal use of your database.
+- Reliability: Backup data can be stored on highly durable external storage services to provide confidence that it will be there when you need it.
+- Security: The BR solution supports [encrypting backup data](./encryption-at-rest.md#backups-with-br), as well as storing it in [immutable/locked object stores](./br/backup-and-restore-storages.md#other-features-supported-by-the-storage-service) to safeguard the confidentiality of the backup data, and protect it against corruption or deletion (whether accidental or malicious).
 - Cost effectiveness: You can get your database protected using BR without spending too much.
 
 Generally speaking, BR is the last resort for data safety. It improves the safety and reliability of the databases without requiring too much cost. BR protects data in various unexpected situations so that you can use the database safely without worrying about the risk of data loss or damage.
@@ -22,9 +22,9 @@ As shown in the preceding architecture, you can back up data to a DR storage dev
 
 > **Note:**
 >
-> The term "region" in this document means a physical location.
+> The term "region" in this document means a physical geographic location.
 
-Meanwhile, TiDB provides backup and restore based on block storage snapshots. This feature reduces the recovery time to hours or even less than one hour. TiDB is continuously improving and optimizing the backup and restore capabilities so as to provide you better services.
+TiDB provides backup and restore capabilities based on block storage snapshots, TiDB also supports backing up the Raft transaction logs. This feature reduces the recovery time to hours or even less than one hour. TiDB is continuously improving and optimizing the backup and restore capabilities so as to provide you better services.
 
 TiDB also provides detailed documentation to help you understand how to use the backup and restore feature in DR scenarios. Among them,
 
