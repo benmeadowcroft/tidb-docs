@@ -48,7 +48,8 @@ In the preceding command:
 
 > **Note:**
 >
-> The BR tool already supports self-adapting to GC. It automatically registers `backupTS` (the latest PD timestamp by default) to PD's `safePoint` to ensure that TiDB's GC Safe Point does not move forward during the backup, thus avoiding manually setting GC configurations.
+> - Starting from v8.5.0, the BR tool disables the table-level checksum calculation during full backups by default (`--checksum=false`) to improve backup performance.
+> - The BR tool already supports self-adapting to GC. It automatically registers `backupTS` (the latest PD timestamp by default) to PD's `safePoint` to ensure that TiDB's GC Safe Point does not move forward during the backup, thus avoiding manually setting GC configurations.
 
 During backup, a progress bar is displayed in the terminal, as shown below. When the progress bar advances to 100%, the backup is complete.
 
@@ -134,10 +135,6 @@ tiup br restore full \
 When the backup and restore feature backs up data, it stores statistics in JSON format within the `backupmeta` file. When restoring data, it loads statistics in JSON format into the cluster. For more information, see [LOAD STATS](/sql-statements/sql-statement-load-stats.md).
 
 ## Encrypt the backup data
-
-> **Warning:**
->
-> This is an experimental feature. It is not recommended that you use it in the production environment.
 
 BR supports encrypting backup data at the backup side and [at the storage side when backing up to Amazon S3](/br/backup-and-restore-storages.md#amazon-s3-server-side-encryption). You can choose either encryption method as required.
 
@@ -278,10 +275,6 @@ ADMIN RELOAD BINDINGS;
 ```
 
 ## Restore encrypted snapshots
-
-> **Warning:**
->
-> This is an experimental feature. It is not recommended that you use it in the production environment.
 
 After encrypting the backup data, you need to pass in the corresponding decryption parameters to restore the data. Ensure that the decryption algorithm and key are correct. If the decryption algorithm or key is incorrect, the data cannot be restored. The following is an example:
 

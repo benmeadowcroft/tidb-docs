@@ -78,9 +78,8 @@ delta_index_cache_size = 0
     ## * format_version = 3, the default format for v6.0.0 and v6.1.x, which provides more data validation features.
     ## * format_version = 4, the default format for versions from v6.2.0 to v7.3.0, which reduces write amplification and background task resource consumption
     ## * format_version = 5, introduced in v7.3.0, the default format for versions from v7.4.0 to v8.3.0, which reduces the number of physical files by merging smaller files.
-    # format_version = 5
     ## * format_version = 6, introduced in v8.4.0, which partially supports the building and storage of vector indexes.
-    ## * format_version = 7, introduced in v7.3.0, the default format for v8.4.0 and later versions, which supports the build and storage of vector indexes
+    ## * format_version = 7, introduced in v8.4.0, the default format for v8.4.0 and later versions, which supports the build and storage of vector indexes
     # format_version = 7
 
     [storage.main]
@@ -234,6 +233,13 @@ delta_index_cache_size = 0
 
     ## New in v5.0. This item specifies the maximum number of cop requests that TiFlash Coprocessor executes at the same time. If the number of requests exceeds the specified value, the exceeded requests will queue. If the configuration value is set to 0 or not set, the default value is used, which is twice the number of physical cores.
     cop_pool_size = 0
+
+    ## New in v5.0. This item specifies the maximum number of cop requests that TiFlash Coprocessor handles at the same time, including the requests being executed and the requests waiting in the queue. If the number of requests exceeds the specified value, the error "TiFlash Server is Busy" is returned. -1 indicates no limit; 0 indicates using the default value, which is 10 * cop_pool_size.
+    cop_pool_handle_limit = 0
+
+    ## New in v5.0. This item specifies the maximum time that a cop request can queue in TiFlash. If a cop request waits in the queue for a time longer than the value specified by this configuration, the error "TiFlash Server is Busy" is returned. A value less than or equal to 0 indicates no limit.
+    cop_pool_max_queued_seconds = 15
+
     ## New in v5.0. This item specifies the maximum number of batch requests that TiFlash Coprocessor executes at the same time. If the number of requests exceeds the specified value, the exceeded requests will queue. If the configuration value is set to 0 or not set, the default value is used, which is twice the number of physical cores.
     batch_cop_pool_size = 0
     ## New in v6.1.0. This item specifies the number of requests that TiFlash can concurrently process when it receives ALTER TABLE ... COMPACT from TiDB.

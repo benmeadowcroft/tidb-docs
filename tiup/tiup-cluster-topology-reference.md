@@ -372,7 +372,7 @@ tikv_servers:
 
 - `ssh_port`: Specifies the SSH port to connect to the target machine for operations. If it is not specified, the `ssh_port` of the `global` section is used.
 
-- `tcp_port`: The port of the TiFlash TCP service. The default value is `9000`.
+- `tcp_port`: The port of the TiFlash TCP service for internal testing purposes. The default value is `9000`. Starting from TiUP v1.12.5, this configuration item does not take effect on clusters that are v7.1.0 or later.
 
 - `flash_service_port`: The port via which TiFlash provides services. TiDB reads data from TiFlash via this port. The default value is `3930`.
 
@@ -406,7 +406,6 @@ After the deployment, for the fields above, you can only add directories to `dat
 
 - `host`
 - `tcp_port`
-- `http_port`
 - `flash_service_port`
 - `flash_proxy_port`
 - `flash_proxy_status_port`
@@ -435,9 +434,9 @@ tiflash_servers:
 
 - `port`: The listening port of the TiProxy SQL services. The default value is `6000`.
 
-- `deploy_dir`: Specifies the deployment directory. If it is not specified or specified as a relative directory, the directory is generated based on the `deploy_dir` directory configured in `global`.
+- `status_port`: The listening port of the TiProxy status service. It is used to view the status of the TiProxy services from the external via HTTP requests. The default value is `3080`.
 
-- `data_dir`: Specifies the data directory. If it is not specified or specified as a relative directory, the directory is generated based on the `data_dir` directory configured in `global`.
+- `deploy_dir`: Specifies the deployment directory. If it is not specified or specified as a relative directory, the directory is generated based on the `deploy_dir` directory configured in `global`.
 
 - `numa_node`: Allocates the NUMA policy to the instance. Before specifying this field, you need to make sure that the target machine has [numactl](https://linux.die.net/man/8/numactl) installed. If this field is specified, cpubind and membind policies are allocated using [numactl](https://linux.die.net/man/8/numactl). This field is of string type. The value is the ID of the NUMA node, such as `"0,1"`.
 
@@ -452,7 +451,6 @@ Among the above fields, you cannot modify the following configured fields after 
 - `host`
 - `port`
 - `deploy_dir`
-- `data_dir`
 - `arch`
 - `os`
 
@@ -461,8 +459,18 @@ A `tiproxy_servers` configuration example is as follows:
 ```yaml
 tiproxy_servers:
   - host: 10.0.1.21
+    port: 6000
+    status_port: 3080
+    config:
+      labels: { zone: "zone1" }
   - host: 10.0.1.22
+    port: 6000
+    status_port: 3080
+    config:
+      labels: { zone: "zone2" }
 ```
+
+For more configuration examples, see [TiProxy Deployment Topology](/tiproxy/tiproxy-deployment-topology.md).
 
 ### `kvcdc_servers`
 

@@ -248,7 +248,7 @@ This document only describes the parameters that are not included in command-lin
 ### `raft-client-queue-size`
 
 + Specifies the queue size of the Raft messages in TiKV. If too many messages not sent in time result in a full buffer, or messages discarded, you can specify a greater value to improve system stability.
-+ Default value: `8192`
++ Default value: `16384`
 
 ### `simplify-metrics` <span class="version-mark">New in v6.2.0</span>
 
@@ -1099,12 +1099,12 @@ Configuration items related to Coprocessor.
 
 + The path of the directory where compiled coprocessor plugins are located. Plugins in this directory are automatically loaded by TiKV.
 + If this configuration item is not set, the coprocessor plugin is disabled.
-+ Default value: `"./coprocessors"`
++ Default value: None
 
 ### `enable-region-bucket` <span class="version-mark">New in v6.1.0</span>
 
 + Determines whether to divide a Region into smaller ranges called buckets. The bucket is used as the unit of the concurrent query to improve the scan concurrency. For more about the design of the bucket, refer to [Dynamic size Region](https://github.com/tikv/rfcs/blob/master/text/0082-dynamic-size-region.md).
-+ Default value: false
++ Default value: None, which means disabled by default.
 
 > **Warning:**
 >
@@ -1339,7 +1339,7 @@ Configuration items related to RocksDB
 + Specifies the total memory limit of `memtable` for all RocksDB instances in a single TiKV. `0` means no limit.
 + Default value:
 
-    + When `storage.engine="raft-kv"`, the default value is `0`, which means no limit.
+    + When `storage.engine="raft-kv"`, the default value is none, which means no limit.
     + When `storage.engine="partitioned-raft-kv"`, the default value is 20% of the size of total system memory.
 
 + Unit: KiB|MiB|GiB
@@ -1461,7 +1461,7 @@ Configuration items related to `rocksdb.defaultcf`, `rocksdb.writecf`, and `rock
 
 + Determines whether to use Ribbon filters for levels greater than or equal to this value and use non-block-based bloom filters for levels less than this value. When this configuration item is set, [`block-based-bloom-filter`](#block-based-bloom-filter) will be ignored.
 + Note that this configuration item takes effect only when [`format-version`](#format-version-new-in-v620) >= 5.
-+ Default value: `false`
++ Default value: None, which means disabled by default.
 
 ### `read-amp-bytes-per-bit`
 
@@ -1518,7 +1518,7 @@ Configuration items related to `rocksdb.defaultcf`, `rocksdb.writecf`, and `rock
 ### `target-file-size-base`
 
 + The size of the target file at base level. This value is overridden by `compaction-guard-max-output-file-size` when the `enable-compaction-guard` value is `true`.
-+ Default value: `"8MiB"`
++ Default value: None, which means `"8MiB"` by default.
 + Minimum value: `0`
 + Unit: KiB|MiB|GiB
 
@@ -1601,7 +1601,7 @@ Configuration items related to `rocksdb.defaultcf`, `rocksdb.writecf`, and `rock
 
 + Enables or disables the compaction guard, which is an optimization to split SST files at TiKV Region boundaries. This optimization can help reduce compaction I/O and allows TiKV to use larger SST file size (thus less SST files overall) and at the time efficiently clean up stale data when migrating Regions.
 + Default value for `defaultcf` and `writecf`: `true`
-+ Default value for `lockcf`: `false`
++ Default value for `lockcf`: None, which means disabled by default.
 
 ### `compaction-guard-min-output-file-size`
 
@@ -1633,13 +1633,13 @@ Configuration items related to `rocksdb.defaultcf`, `rocksdb.writecf`, and `rock
 ### `ttl` <span class="version-mark">New in v7.2.0</span>
 
 + SST files with updates older than the TTL will be automatically selected for compaction. These SST files will go through the compaction in a cascading way so that they can be compacted to the bottommost level or file.
-+ Default value: `"0s"`, meaning that no SST file is selected by default.
++ Default value: None, meaning that no SST file is selected by default.
 + Unit: s(second)|h(hour)|d(day)
 
 ### `periodic-compaction-seconds` <span class="version-mark">New in v7.2.0</span>
 
 + The time interval for periodic compaction. SST files with updates older than this value will be selected for compaction and rewritten to the same level where these SST files originally reside.
-+ Default value: `"0s"`, meaning that periodic compaction is disabled by default.
++ Default value: None, meaning that periodic compaction is disabled by default.
 + Unit: s(second)|h(hour)|d(day)
 
 ## rocksdb.defaultcf.titan
@@ -1659,7 +1659,7 @@ Configuration items related to `rocksdb.defaultcf.titan`.
 > - A value smaller than `32KiB` might affect the performance of range scans. However, if the workload primarily involves heavy writes and point queries, you can consider decreasing the value of `min-blob-size` for better performance.
 
 + The smallest value stored in a Blob file. Values smaller than the specified size are stored in the LSM-Tree.
-+ Default value: `"32KiB"`
++ Default value: None, which means `"32KiB"` by default.
 + Minimum value: `0`
 + Unit: KiB|MiB|GiB
 
@@ -1688,7 +1688,7 @@ Configuration items related to `rocksdb.defaultcf.titan`.
 + Recommended value: `0`. Starting from v8.0.0, TiKV introduces the `shared-blob-cache` configuration item and enables it by default, so there is no need to set `blob-cache-size` separately. The configuration of `blob-cache-size` only takes effect when `shared-blob-cache` is set to `false`.
 + Unit: KiB|MiB|GiB
 
-### `shared-blob-cache` (New in v8.0.0)
+### `shared-blob-cache` <span class="version-mark">New in v8.0.0</span>
 
 + Controls whether to enable the shared cache for Titan blob files and RocksDB block files.
 + Default value: `true`. When the shared cache is enabled, block files have higher priority. This means that TiKV prioritizes meeting the cache needs of block files and then uses the remaining cache for blob files.
@@ -2501,3 +2501,36 @@ Configuration items related to [Load Base Split](/configure-load-base-split.md).
 
 + Specifies the amount of data sampled by Heap Profiling each time, rounding up to the nearest power of 2.
 + Default value: `512KiB`
+
+## in-memory-engine <span class="version-mark">New in v8.5.0</span>
+
+TiKV MVCC in-memory engine (IME) configuration items related to the storage layer.
+
+### `enable` <span class="version-mark">New in v8.5.0</span>
+
+> **Note:**
+>
+> You can configure this configuration item in the configuration file, but cannot query it via SQL statements.
+
++ Whether to enable the in-memory engine to accelerate multi-version queries. For more information about the in-memory engine, see [TiKV MVCC In-Memory Engine](/tikv-in-memory-engine.md)
++ Default value: `false` (indicating the in-memory engine is disabled)
+
+### `capacity` <span class="version-mark">New in v8.5.0</span>
+
+> **Note:**
+>
+> + After the in-memory engine is enabled, `block-cache.capacity` automatically decreases by 10%.
+> + If you manually configure `capacity`, `block-cache.capacity` does not automatically decrease. In this case, you need to manually adjust its value to avoid OOM.
+
++ Controls the maximum memory size that the in-memory engine can use. The maximum value is 5 GiB. You can manually configure it to use more memory.
++ Default value: 10% of the system memory.
+
+### `gc-run-interval` <span class="version-mark">New in v8.5.0</span>
+
++ Controls the time interval that the in-memory engine GC caches MVCC versions. Reducing this parameter can increase the GC frequency, and decrease the number of MVCC versions, but will increase CPU consumption for GC and increase the probability of in-memory engine cache miss.
++ Default value: `"3m"`
+
+### `mvcc-amplification-threshold` <span class="version-mark">New in v8.5.0</span>
+
++ Controls the threshold for MVCC read amplification when the in-memory engine selects and loads Regions. The default value is `10`, indicating that if reading a single row in a Region requires processing more than 10 MVCC versions, this Region might be loaded into the in-memory engine.
++ Default value: `10`

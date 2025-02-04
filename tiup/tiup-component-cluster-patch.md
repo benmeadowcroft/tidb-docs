@@ -29,7 +29,7 @@ Before running the `tiup cluster patch` command, you need to pack the binary pac
 1. Determine the following variables:
 
     - `${component}`: the name of the component to be replaced (such as `tidb`, `tikv`, or `pd`).
-    - `${version}`: the version of the component (such as `v8.4.0` or `v7.5.4`).
+    - `${version}`: the version of the component (such as `v8.5.0` or `v7.5.4`).
     - `${os}`: the operating system (`linux`).
     - `${arch}`: the platform on which the component runs (`amd64`, `arm64`).
 
@@ -120,4 +120,6 @@ After you have completed the preceding steps, you can use `/tmp/${component}-hot
 
 The execution log of the tiup-cluster.
 
-[<< Back to the previous page - TiUP Cluster command list](/tiup/tiup-component-cluster.md#command-list)
+## See also
+
+- [TiUP Common Operations](/maintain-tidb-using-tiup.md)
